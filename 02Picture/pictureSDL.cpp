@@ -29,6 +29,8 @@ int main(int argc, char *argv[]) {
     // Check if image is loaded correctly. Exit early and cleanly if not
     if (!imageSurface) {
         std::cout << "Image Load Error: " << SDL_GetError() << "\n";
+        SDL_FreeSurface(imageSurface);
+        SDL_FreeSurface(windowSurface);
         SDL_DestroyWindow(window);
         SDL_Quit();
         return -1;
@@ -40,6 +42,8 @@ int main(int argc, char *argv[]) {
     SDL_Delay(3000);
     
     // Deallocate memory and quit SDL
+    SDL_FreeSurface(imageSurface);
+    SDL_FreeSurface(windowSurface);
     SDL_DestroyWindow(window);
     SDL_Quit();
 
