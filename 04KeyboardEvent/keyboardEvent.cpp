@@ -1,53 +1,99 @@
 #include <SDL2/SDL.h>
 #include <iostream>
 
-int main(int argc, char *argv[]) {
-    // Creating window variables
-    SDL_Window *window = nullptr;
-    SDL_Surface *windowSurface = nullptr;
-    SDL_Surface *image1 = nullptr;
-    SDL_Surface *image2 = nullptr;
-    SDL_Surface *image3 = nullptr;
-    SDL_Surface *currentImage = nullptr;
+enum KeyPressImages {
+    KEY_DEFAULT,
+    KEY_ONE,
+    KEY_TWO,
+    KEY_THREE,
+    KEY_TOTAL
+};
 
-    // Initialize SDL. Quit early if an error is encountered
+SDL_Window* window = nullptr;
+SDL_Surface* windowSurface = nullptr;
+
+SDL_Surface* images[KEY_TOTAL];
+
+SDL_Surface* currentImage = nullptr;
+
+// Initializes SDL. Returns true if succeeded, false if not
+bool init() {
+    // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cout << "Video Initialization Error: " << SDL_GetError() << "\n";
-        return -1;
+        return false;
     }
 
-    window = SDL_CreateWindow("Switch Me", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    // Create the window
+    window = SDL_CreateWindow("Press 1, 2, or 3!", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         640, 480, SDL_WINDOW_SHOWN);
-    // Quit early if an error is encountered during window creation
+    // Check if window has been created properly
     if (!window) {
         std::cout << "Window Creation Error: " << SDL_GetError() << "\n";
-        return -1;
+        return false;
     }
 
+    // Get the window's surface
     windowSurface = SDL_GetWindowSurface(window);
 
-    image1 = SDL_LoadBMP("Image1.bmp");
-    if (!image1) {
-        std::cout << "Image Load Error: " << SDL_GetError() << "\n";
-        SDL_DestroyWindow(window);
+    return true;
+        
+}
+
+SDL_Surface* loadImage(std::string path) {
+    SDL_Surface* loadedImage = SDL_LoadBMP(path.c_str());
+    if (!loadedImage)
+        std::cout << "Failed to load image " << path << " : " << SDL_GetError() << "\n";
+
+    return loadedImage;
+}
+
+// Load pictures, etc. Returns true if succeeded, false if not
+bool loadMedia() {
+    images[KEY_DEFAULT] = loadImage("DefaultImage.bmp");
+    if (!images[KEY_DEFAULT])
+        return false;
+
+    images[KEY_ONE] = loadImage("Image1.bmp");
+    if (!images[KEY_ONE])
+        return false;
+
+    images[KEY_TWO] = loadImage("Image2.bmp");
+    if (!images[KEY_TWO])
+        return false;
+
+    images[KEY_THREE] = loadImage("Image3.bmp");
+    if (!images[KEY_THREE])
+        return false;
+
+    return true;
+}
+
+// Clean memory before exiting the program
+void clean() {
+    for (int i = 0; i < KEY_TOTAL; ++i) {
+        SDL_FreeSurface(images[i]);
+        images[i] = nullptr;
+    }
+    // Destroy the window
+    SDL_DestroyWindow(window);
+    window = nullptr;
+
+    // Quit SDL
+    SDL_Quit();
+}
+
+int main(int argc, char *argv[]) {
+    if(!init())
+        return -1;
+
+    if (!loadMedia()) {
+        clean();
         return -1;
     }
-    image2 = SDL_LoadBMP("Image2.bmp");
-    if (!image2) {
-        std::cout << "Image Load Error: " << SDL_GetError() << "\n";
-        SDL_FreeSurface(image1);
-        SDL_DestroyWindow(window);
-        return -1;
-    }
-    image3 = SDL_LoadBMP("Image3.bmp");
-    if (!image3) {
-        std::cout << "Image Load Error: " << SDL_GetError() << "\n";
-        SDL_FreeSurface(image2);
-        SDL_FreeSurface(image1);
-        SDL_DestroyWindow(window);
-        return -1;
-    }
-    currentImage = image1;
+
+    // Set the default image as current
+    currentImage = images[KEY_DEFAULT];
 
     // Primary loop run flag
     bool isRunning = true;
@@ -65,14 +111,16 @@ int main(int argc, char *argv[]) {
             if (ev.type == SDL_KEYDOWN) {
                 switch (ev.key.keysym.sym) {
                     case SDLK_1: 
-                        currentImage = image1;
+                        currentImage = images[KEY_ONE];
                         break;
                     case SDLK_2:
-                        currentImage = image2;
+                        currentImage = images[KEY_TWO];
                         break;
                     case SDLK_3:
-                        currentImage = image3;
+                        currentImage = images[KEY_THREE];
                         break;
+                    default:
+                        currentImage = images[KEY_DEFAULT];
                 }
             }
         }
@@ -83,12 +131,7 @@ int main(int argc, char *argv[]) {
         SDL_Delay(33);
     }
 
-    // Deallocate memory and quit SDL
-    SDL_FreeSurface(image3);
-    SDL_FreeSurface(image2);
-    SDL_FreeSurface(image1);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+    clean();
 
     return 0;
 }
