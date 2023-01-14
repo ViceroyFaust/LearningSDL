@@ -49,11 +49,6 @@ int main(int argc, char *argv[]) {
         clean();
         return -1;
     }
-    
-    // Make the window a certain colour
-    SDL_FillRect(windowSurface, NULL, SDL_MapRGB(windowSurface->format, 0x38, 0xF0, 0xF9));
-    // Make sure the changes are visible
-    SDL_UpdateWindowSurface(window);
 
     // Primary loop run flag
     bool isRunning = true;
@@ -68,6 +63,10 @@ int main(int argc, char *argv[]) {
             if(ev.type == SDL_QUIT)
                 isRunning = false;
         }
+        // Make the window a certain colour
+        SDL_FillRect(windowSurface, NULL, SDL_MapRGB(windowSurface->format, 0x38, 0xF0, 0xF9));
+        // Make sure the changes are visible
+        SDL_UpdateWindowSurface(window);
 
         // Prevent the program from hogging the CPU by slowing down the loop
         SDL_Delay(33);
