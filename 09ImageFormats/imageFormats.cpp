@@ -1,105 +1,132 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
+#include <SDL.h>
+#include <SDL_image.h>
 #include <iostream>
+#include <string>
 
-SDL_Texture *loadTexture(std::string filePath, SDL_Renderer *renderTarget) {
-    SDL_Texture *texture = nullptr;
-    SDL_Surface *surface = IMG_Load(filePath.c_str());
+const int SCREEN_WIDTH = 640;
+const int SCREEN_HEIGHT = 480;
+const std::string SCREEN_TITLE = "I use PNGs!";
 
-    if (!surface) {
-        std::cout << "Picture Loading Error\n";
+SDL_Window* window = nullptr;
+SDL_Surface* windowSurface = nullptr;
+SDL_Surface* image = nullptr;
+
+// Initializes SDL. Returns true if succeeded, false if not
+bool init() {
+    // Initialize SDL
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        std::cout << "Video Initialization Error: " << SDL_GetError() << "\n";
+        return false;
+    }
+
+    // Create the window
+    window = SDL_CreateWindow(SCREEN_TITLE.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+        SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+    // Check if window has been created properly
+    if (!window) {
+        std::cout << "Window Creation Error: " << SDL_GetError() << "\n";
+        return false;
+    }
+
+    // Initialize the PNG loading library
+    int imgFlags = IMG_INIT_PNG;
+    if (!(IMG_Init(imgFlags) & imgFlags)) {
+        std::cout << "Image Library Creation Error: " << IMG_GetError() << "\n";
+        return false;
+    }
+
+    // Get the window's surface
+    windowSurface = SDL_GetWindowSurface(window);
+
+    return true;
+        
+}
+
+SDL_Surface* loadImage(std::string path) {
+    // Final, optimized surface to return
+    SDL_Surface* optimizedSurface = nullptr;
+    // Loaded surface
+    SDL_Surface* loadedImage = IMG_Load(path.c_str());
+    if (!loadedImage) {
+        std::cout << "Failed to load image " << path << ": " << SDL_GetError() << "\n";
+        return nullptr;
+    }
+    
+    // Convert the loaded surface to screen format (flag must always be 0)
+    optimizedSurface = SDL_ConvertSurface(loadedImage, windowSurface->format, 0);
+    if (!optimizedSurface) {
+        std::cout << "Failed to optimize image " << path << ": " << SDL_GetError() << "\n";
         return nullptr;
     }
 
-    texture = SDL_CreateTextureFromSurface(renderTarget, surface);
+    // Free the allocated memory
+    SDL_FreeSurface(loadedImage);
+    loadedImage = nullptr;
 
-    if (!texture) {
-        std::cout << "Texture Creation Error\n";
-        return nullptr;
-    }
+    return optimizedSurface;
+}
 
-    SDL_FreeSurface(surface);
+// Load pictures, etc. Returns true if succeeded, false if not
+bool loadMedia() {
+    image = loadImage("SSTV_Image.png");
+    if (!image)
+        return false;
 
-    return texture;
+    return true;
+}
+
+// Clean memory before exiting the program
+void clean() {
+    // Free the image memory
+    SDL_FreeSurface(image);
+    image = nullptr;
+    // Destroy the window
+    SDL_DestroyWindow(window);
+    window = nullptr;
+
+    // Quit SDL
+    SDL_Quit();
 }
 
 int main(int argc, char *argv[]) {
-    // Creating window variables
-    SDL_Window *window = nullptr;
-    SDL_Renderer *renderTarget = nullptr;
-    SDL_Texture *imageTexture = nullptr;
-
-    // Initialize SDL. Quit early if an error is encountered
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        std::cout << "Video Initialization Error: " << SDL_GetError() << "\n";
+    if(!init()) {
+        clean();
+        return -1;
+    }
+    if (!loadMedia()) {
+        clean();
         return -1;
     }
 
-    int imageFlags = IMG_INIT_PNG;
+    // Apply the stretched image via rect
+    SDL_Rect stretchRect;
+    stretchRect.x = 0;
+    stretchRect.y = 0;
+    stretchRect.w = SCREEN_WIDTH;
+    stretchRect.h = SCREEN_HEIGHT;
+    SDL_BlitScaled(image, NULL, windowSurface, &stretchRect);
 
-    // Initialize SDL Image. Quit if an error is encountered
-    if (IMG_Init(imageFlags) != imageFlags) {
-        std::cout << "Error in Image Format Init: " << IMG_GetError() << "\n";
-        SDL_Quit();
-        return -1;
-    }
-
-    window = SDL_CreateWindow("Exit Me", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        640, 480, SDL_WINDOW_SHOWN);
-    // Quit early if an error is encountered during window creation
-    if (!window) {
-        std::cout << "Window Creation Error: " << SDL_GetError() << "\n";
-        SDL_Quit();
-        return -1;
-    }
-
-    // -1 tells to use any compatible driver. SDL_RENDERER_ACCELERATED means
-    // that this renderer will use the GPU
-    renderTarget = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderTarget) {
-        std::cout << "Renderer Activation Error: " << SDL_GetError() << "\n";
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
-
-    imageTexture = loadTexture("SSTV_Image.png", renderTarget);
-
-    // Check if image is loaded correctly. Exit early and cleanly if not
-    if (!imageTexture) {
-        std::cout << "Image Load Error: " << SDL_GetError() << "\n";
-        SDL_DestroyRenderer(renderTarget);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
-    
     // Primary loop run flag
     bool isRunning = true;
     // Event handler
     SDL_Event ev;
 
-    SDL_RenderClear(renderTarget);
-    SDL_RenderCopy(renderTarget, imageTexture, NULL, NULL);
-    SDL_RenderPresent(renderTarget);
     // Primary loop
     while (isRunning) {
         // Event loop
         while (SDL_PollEvent(&ev) != 0) {
             // Quit button detection
-            if(ev.type == SDL_QUIT)
+            if (ev.type == SDL_QUIT) {
                 isRunning = false;
+            }
         }
-        
+
+        SDL_UpdateWindowSurface(window);
         // Prevent the program from hogging the CPU by slowing down the loop
         SDL_Delay(33);
     }
 
-    // Deallocate memory and quit SDL
-    SDL_DestroyTexture(imageTexture);
-    SDL_DestroyRenderer(renderTarget);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+    clean();
 
     return 0;
 }
