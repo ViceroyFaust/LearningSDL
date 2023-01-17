@@ -1,5 +1,5 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = viewport.cpp
+OBJS = viewport.cpp globals.cpp util.cpp
 
 #CC specifies which compiler we're using
 CC = g++
@@ -9,7 +9,7 @@ CC = g++
 COMPILER_FLAGS = -std=c++17 $(shell sdl2-config --cflags)
 
 #LINKER_FLAGS specifies the libraries we're linking against
-LINKER_FLAGS = $(shell sdl2-config --libs) -lSDL2_image
+LINKER_FLAGS = $(shell sdl2-config --libs) -lSDL2_image 
 
 #OBJ_NAME specifies the name of our exectuable
 OBJ_NAME = viewport
