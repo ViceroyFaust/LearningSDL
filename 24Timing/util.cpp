@@ -74,8 +74,8 @@ bool loadMedia() {
 // Clean memory before exiting the program
 void clean() {
     // Free Textures
-    gPromptTexture.free()
-    gTimeTextTexture.free()
+    gPromptTexture.free();
+    gTimeTextTexture.free();
     // Free the font
     TTF_CloseFont(gFont);
     // Destroy Window Renderer
