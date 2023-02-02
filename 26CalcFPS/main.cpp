@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream> 
 #include <iomanip>
+#include <queue>
 
 int main(int argc, char *argv[]) {
     if(!init()) {
@@ -25,17 +26,20 @@ int main(int argc, char *argv[]) {
     // Black text color
     SDL_Color textColor = {0, 0, 0, 255};
 
-    OwlTimer fpsTimer;
-
     // In memory text stream
     std::stringstream timeText;
 
-    // Start counting frames per second
-    int countedFrames = 0;
-    fpsTimer.start();
+    OwlTimer fpsTimer;
 
+    std::queue<Uint32> frameTimeBufferQueue;
+
+    Uint32 frameTimeSum = 0;
+    double averageFPS = 0;
+   
+    int frameCount = 0;
     // Primary loop
     while (isRunning) {
+        fpsTimer.start();
         // Event loop
         while (SDL_PollEvent(&ev) != 0) {
             // Quit button detection
@@ -44,28 +48,42 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Calculate and correct FPS
-        double averageFPS = countedFrames / (fpsTimer.getTicks() / 1000.0);
-        if (averageFPS > 2000000)
-            averageFPS = 0;
-
         timeText.str("");
         timeText << "Average Frames Per Second: " << averageFPS;
 
-        if (!gFPSTextTexture.loadFromRenderedText(timeText.str().c_str(), textColor)) {
-            std::cout << "Failed to render the average FPS texture!\n";
+        if (frameCount >= 10) {
+            if (!gFPSTextTexture.loadFromRenderedText(timeText.str().c_str(), textColor)) {
+                std::cout << "Failed to render the average FPS texture!\n";
+            }
         }
+
         // Clear screen and draw background color
         SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
         SDL_RenderClear(gRenderer);
 
-        // Render the text textures
+        // Render the text textures 
         gFPSTextTexture.render((SCREEN_WIDTH - gFPSTextTexture.getWidth()) / 2, 
                 (SCREEN_HEIGHT - gFPSTextTexture.getHeight()) / 2);
 
         // Update screen
         SDL_RenderPresent(gRenderer);
-        ++countedFrames;
+        ++frameCount;
+        
+        frameTimeBufferQueue.push(fpsTimer.getTicks());
+        fpsTimer.stop();
+
+        frameTimeSum += frameTimeBufferQueue.back();
+
+        if (frameTimeBufferQueue.size() == 100) {
+            if (frameCount >= 10)
+                averageFPS = 100000.0 / frameTimeSum;
+
+            frameTimeSum -= frameTimeBufferQueue.front();
+            frameTimeBufferQueue.pop();
+        }
+
+        if (frameCount > 10)
+            frameCount = 0;
     }
 
     clean();
